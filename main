@@ -1,0 +1,921 @@
+<!DOCTYPE HTML>
+<html>
+<head><meta charset="utf-8"></head>
+<body onkeydown="getKhar(event)">
+<canvas id="canmain" width="600" height="900"></canvas>
+<script>
+"use strict";
+var b_canvas = document.getElementById("canmain");
+var c = b_canvas.getContext("2d");
+c.translate(0,900);
+c.scale(1,-1);
+
+
+//#######################################################################################
+//#####################global variable###################################################
+//########################start##########################################################
+var p = {};
+var localobj1 = localStorage.getItem("localobj1");
+p[1] = JSON.parse(localobj1);
+var localobj2 = localStorage.getItem("localobj2");
+p[2] = JSON.parse(localobj2);
+
+
+
+
+var rc = {};
+rc[1] = {l:0};
+rc[2] = {l:0}; 
+var rcvt;
+for (rcvt=1; rcvt<=p[1]["vertex"]["lxy"]; rcvt++){rc[1][rcvt] = {x:0,y:0};}
+for (rcvt=1; rcvt<=p[2]["vertex"]["lxy"]; rcvt++){rc[2][rcvt] = {x:0,y:0};}
+
+var currentframe;
+var recordframe = {};
+for (currentframe = 0; currentframe<10; currentframe++)
+{
+	recordframe[currentframe] = {
+								1:{l:0},
+								2:{l:0}
+								}					
+	for (rcvt=1; rcvt<=p[1]["vertex"]["lxy"]; rcvt++){recordframe[currentframe][1][rcvt] = {x:0,y:0};}
+	for (rcvt=1; rcvt<=p[2]["vertex"]["lxy"]; rcvt++){recordframe[currentframe][2][rcvt] = {x:0,y:0};}
+}
+currentframe = 0;
+
+var transmission;
+transmission = 0.1;
+
+var colorobj = [];
+colorobj[1] = "#00FF00";
+colorobj[2] = "#FF0000";
+
+
+var fullkin = [];
+var mass = [];
+var inertia = [];
+mass[1] = 1;
+mass[2] = 1;
+inertia[1] = 13541.66;
+inertia[2] = 13541.66;
+var playstop,playspeed,playcount;
+playstop = 1;
+playspeed = 0;
+
+
+var glass = {};
+var localobj3 = localStorage.getItem("localobj3");
+glass = JSON.parse(localobj3);
+
+var chien;
+chien = 0;
+var countround;
+countround = 0;
+
+var scaletest;
+
+scaletest = 100;
+// rc[номер объекта]["l"] - количество вершин объекта
+// rc[номер объекта][номер вершины]["x"]
+// rc[номер объекта][номер вершины]["y"]
+
+//##########################end##########################################################
+//#####################global variable###################################################
+//#######################################################################################
+
+//#######################################################################################
+//#####################special function##################################################
+//########################start##########################################################
+
+function hozon(v1,v2,m1,m2)
+{var u1,u2;
+u1 = (m1-m2)/(m1+m2)*(v1-v2)+v2;
+u2 = 2*m1/(m1+m2)*(v1-v2)+v2;
+return [u1,u2];
+}
+
+
+function oneside (x1,x2,x3,x4,y1,y2,y3,y4)// 1 и 2 - точки, образующие линию, 3 - контрольная точка, 4 - тестируемая
+{
+    var dx,dy,k,b,yT,yC;
+    dx=x1-x2;
+    dy=y1-y2;
+    if(dx == 0){dx = 0.01;}
+    k=dy/dx;
+    b=y2-x2*k;
+    yT=k*x4+b;
+    yC=k*x3+b;
+    if(yC>=y3)
+    {if (yT>=y4){return true;}else{return false;}}
+    else
+    {if (yT<=y4){return true;}else{return false;}}
+}
+
+function pointOnLine(x1,y1,x2,y2,x0,y0)//возвращает ближайшую к (x0,y0) точку на прямой, проведенной через (x1,y1) и (x2,y2)
+{
+var ttaatt,ttbbtt,ttcctt,x,y;
+ttaatt = (y1-y2);
+ttbbtt = (x2-x1);
+ttcctt = (x1*y2-x2*y1);
+
+x = (ttbbtt*(ttbbtt*x0 - ttaatt*y0)- ttaatt*ttcctt)/(Math.pow(ttaatt,2)+Math.pow(ttbbtt,2));
+y = (ttaatt*(-ttbbtt*x0 + ttaatt*y0)- ttbbtt*ttcctt)/(Math.pow(ttaatt,2)+Math.pow(ttbbtt,2));
+return [x,y];
+}//end pointOnLine
+
+var objId = 1;
+function getKhar(event) 
+{
+	if(event.keyCode == 97){transmission = 0.01;}
+	if(event.keyCode == 98){transmission = 0.1;}
+	if(event.keyCode == 99){transmission = 0.5;}
+	if(event.keyCode == 100){transmission = 1;}
+	if(event.keyCode == 101){transmission = 10;}
+	if(event.keyCode == 65){p[objId]["speed"]["x"] = p[objId]["speed"]["x"] - transmission;}
+	if(event.keyCode == 87){p[objId]["speed"]["y"] = p[objId]["speed"]["y"] + transmission;}
+	if(event.keyCode == 68){p[objId]["speed"]["x"] = p[objId]["speed"]["x"] + transmission;}
+	if(event.keyCode == 83){p[objId]["speed"]["y"] = p[objId]["speed"]["y"] - transmission;}
+	if(event.keyCode == 81){p[objId]["spin"] = p[objId]["spin"] + Math.PI/720;}
+	if(event.keyCode == 69){p[objId]["spin"] = p[objId]["spin"] - Math.PI/720;}
+	if(event.keyCode == 49){objId = 1;}
+	if(event.keyCode == 50){objId = 2;}
+	if(event.keyCode == 51){objId = 3;}
+	if(event.keyCode == 52){objId = 4;}
+	if(event.keyCode == 8){var objIdt; for(objIdt=1;objIdt<3;objIdt++){p[objIdt]["speed"]["x"] = p[objIdt]["speed"]["y"] = p[objIdt]["spin"] = 0;}}
+
+
+	if(event.keyCode == 222){playstop = -1*playstop;}
+	if(event.keyCode == 219){playspeed++;}
+	if(event.keyCode == 221){playspeed--;}
+
+	if(event.keyCode == 45){
+							var objforjson1 = JSON.stringify(p[1]);
+							var objforjson2 = JSON.stringify(p[2]);
+
+							localStorage.setItem("localobj1", objforjson1);
+							localStorage.setItem("localobj2", objforjson2);
+							}
+
+	if(event.keyCode == 36){
+							var objforjson3 = JSON.stringify(glass);
+
+							localStorage.setItem("localobj3", objforjson3);
+							}
+
+	if(event.keyCode == 46){
+							glass["v"] = 1;
+							glass["x"] = 0;
+							glass["y"] = 0;
+							var objforjson3 = JSON.stringify(glass);
+							localStorage.setItem("localobj3", objforjson3);
+							}
+
+
+
+
+
+
+
+
+	if(event.keyCode == 37){glass["x"] = glass["x"]-10;}
+	if(event.keyCode == 38){glass["y"] = glass["y"]+10;}
+	if(event.keyCode == 39){glass["x"] = glass["x"]+10;}
+	if(event.keyCode == 40){glass["y"] = glass["y"]-10;}
+
+	if(event.keyCode == 189){glass["v"] = glass["v"]/2;}
+	if(event.keyCode == 187){glass["v"] = glass["v"]*2;}
+
+
+
+}
+
+
+function spinfromE(energy,Momentofinertia){return Math.sign(energy)*Math.sqrt(Math.abs(energy)*2/Momentofinertia);}
+function speedfromE(energy,mass){return Math.sign(energy)*Math.sqrt(Math.abs(energy)*2/mass);}
+
+function efromSpin(spin,Momentofinertia){return Math.sign(spin)*Math.pow(spin, 2)*Momentofinertia/2;}
+function efromSpeed(speed,mass){return Math.sign(speed)*Math.pow(speed, 2)*mass/2;}
+
+function speedfromSpin(spin,Momentofinertia,mass){return spin*Math.sqrt(Momentofinertia/mass)}
+function spinfromSpeed(speed,Momentofinertia,mass){return speed*Math.sqrt(mass/Momentofinertia)}
+
+function zerozero(N){if(Math.abs(N)<0.0000000000001){return 0;}else{return N;}}
+
+function zettaichi(n)
+{var i,sum;
+sum = 0;
+for(i = 0;i<n.length;i++){sum = sum+Math.abs(n[i]);}
+return sum;
+}
+
+
+//#########################end###########################################################
+//#####################special function##################################################
+//#######################################################################################
+
+//#######################################################################################
+//#####################general function##################################################
+//#########################start#########################################################
+
+
+function move(N) //рассчет новых координат объекта
+{
+	p[N]["centmass"]["x"] = p[N]["centmass"]["x"] + p[N]["speed"]["x"];
+	p[N]["centmass"]["y"] = p[N]["centmass"]["y"] + p[N]["speed"]["y"];
+	p[N]["angle"] = p[N]["angle"] + p[N]["spin"];
+	recordframe[currentframe][N]["l"] = rc[N]["l"] = p[N]["vertex"]["lxy"];//magia?
+	var vt;
+	for (vt=1; vt<=rc[N]["l"]; vt++)
+	{
+		recordframe[currentframe][N][vt] = rc[N][vt]={
+				x:p[N]["centmass"]["x"]+p[N]["vertex"]["l"][vt]*Math.cos(p[N]["angle"]+p[N]["vertex"]["a"][vt]),
+				y:p[N]["centmass"]["y"]+p[N]["vertex"]["l"][vt]*Math.sin(p[N]["angle"]+p[N]["vertex"]["a"][vt])
+				};
+	}
+//p[N]["speed"]["x"] = p[N]["speed"]["y"] = 0;
+}//end move
+
+function draw(N,color) //отрисовка объекта
+{
+
+var xcor,ycor;
+
+
+
+c.scale(glass["v"],glass["v"]);
+c.translate(-glass["x"],-glass["y"]);	
+
+
+
+c.lineWidth = 1;
+	c.strokeStyle = color;
+	c.beginPath();
+	c.moveTo(rc[N][1]["x"],rc[N][1]["y"]);
+	var vt;
+	for (vt=2; vt<=rc[N]["l"]; vt++)
+	{
+	c.lineTo(rc[N][vt]["x"],rc[N][vt]["y"]);
+	}
+	c.closePath();
+	c.stroke();
+
+
+
+var curri;
+for(curri = 0;curri<10;curri++)
+{
+
+if(currentframe - curri == 0)
+{c.fillStyle = "#000000";}
+if(currentframe - curri == 1)
+{c.fillStyle = "#ff0000";}
+if(currentframe - curri == 2)
+{c.fillStyle = "#FFA500";}
+if(currentframe - curri == 3)
+{c.fillStyle = "#ffff00";}
+if(currentframe - curri == 4)
+{c.fillStyle = "#00ff00";}
+if(currentframe - curri == 5)
+{c.fillStyle = "#00BFFF";}
+if(currentframe - curri == 6)
+{c.fillStyle = "#0000FF";}
+if(currentframe - curri == 7)
+{c.fillStyle = "#9400D3";}
+if(currentframe - curri == 8)
+{c.fillStyle = "#FF1493";}
+if(currentframe - curri == 9)
+{c.fillStyle = "#FF1493";}
+
+
+	for (vt=1; vt<=recordframe[curri][N]["l"]; vt++)
+	{
+		c.beginPath();
+		c.arc(recordframe[curri][N][vt]["x"],recordframe[curri][N][vt]["y"], 0.1, 0, Math.PI*2);
+		c.fill();
+	}
+
+
+
+
+}
+
+
+
+
+c.translate(glass["x"],glass["y"]);
+c.scale(1/glass["v"],1/glass["v"]);
+
+
+
+
+
+	for (vt=1; vt<=rc[N]["l"]; vt++)
+	{
+		c.scale(1,-1);
+		c.fillStyle = "#000000";
+		c.font = '16px arial';
+		c.fillText(vt, rc[N][vt]["x"], -rc[N][vt]["y"]);
+		c.scale(1,-1);
+	}
+c.scale(1,-1);
+c.fillStyle = "#000000";
+c.font = '16px arial';
+c.fillText(N+"speedx = "+p[N]["speed"]["x"], N*N*N*N*N*10, -850);
+c.fillText(N+"speedy = "+p[N]["speed"]["y"], N*N*N*N*N*10, -825);
+c.fillText(N+"spin = "+p[N]["spin"], N*N*N*N*N*10, -800);
+c.fillText(N+"kinetic = "+fullkin[N], N*N*N*N*N*10, -775);
+c.fillText("allkinetic = "+(fullkin[1]+fullkin[2]), 200, -750);
+c.fillText("playspeed = "+playspeed, 200, -725);
+c.scale(1,-1);
+
+
+
+
+
+
+
+//total v
+
+c.lineWidth = 2;
+c.strokeStyle = "#000000";
+c.beginPath();
+c.moveTo(p[1]["centmass"]["x"],p[1]["centmass"]["y"]);
+c.lineTo(p[1]["centmass"]["x"]+scaletest*p[1]["speed"]["x"],p[1]["centmass"]["y"]+scaletest*p[1]["speed"]["y"]);
+c.closePath();
+c.stroke();
+
+var clockwise;
+if(p[1]["spin"]>0){clockwise = false;}else{clockwise = true;}
+
+c.strokeStyle = "#000000";
+c.beginPath();
+c.arc(p[1]["centmass"]["x"], p[1]["centmass"]["y"], p[1]["vertex"]["l"]["1"], p[1]["vertex"]["a"]["1"]+p[1]["angle"], p[1]["vertex"]["a"]["1"]+p[1]["angle"]+100*p[1]["spin"],clockwise);
+c.stroke();
+
+
+c.lineWidth = 2;
+c.strokeStyle = "#000000";
+c.beginPath();
+c.moveTo(p[2]["centmass"]["x"],p[2]["centmass"]["y"]);
+c.lineTo(p[2]["centmass"]["x"]+scaletest*p[2]["speed"]["x"],p[2]["centmass"]["y"]+scaletest*p[2]["speed"]["y"]);
+c.closePath();
+c.stroke();
+
+if(p[2]["spin"]>0){clockwise = false;}else{clockwise = true;}
+
+c.strokeStyle = "#000000";
+c.beginPath();
+c.arc(p[2]["centmass"]["x"], p[2]["centmass"]["y"], p[2]["vertex"]["l"]["1"], p[2]["vertex"]["a"]["1"]+p[2]["angle"], p[2]["vertex"]["a"]["1"]+p[2]["angle"]+100*p[2]["spin"],clockwise);
+c.stroke();
+
+//total v
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}//end draw
+
+
+
+
+function collisionDetection(A,B) //проверка столкновений
+{
+
+
+var vt,vt1,vt2,vtt;
+var preciseout1 = [];
+preciseout1[0] = rc[B]["l"];
+for (vt1=1; vt1<=rc[A]["l"]; vt1++)
+{
+	if(vt1 == rc[A]["l"]){vtt = 1;}else{vtt = vt1+1;}
+	for (vt2=1; vt2<=rc[B]["l"]; vt2++)
+	{
+		if(preciseout1[vt2]){}
+		else
+		{
+			if(oneside (rc[A][vt1]["x"],rc[A][vtt]["x"],p[1]["centmass"]["x"],rc[B][vt2]["x"],
+						rc[A][vt1]["y"],rc[A][vtt]["y"],p[1]["centmass"]["y"],rc[B][vt2]["y"]) == false) //точка точно снаружи  p[1]["centmass"]["x"] magia
+			{	
+				preciseout1[0] = preciseout1[0]-1;
+				preciseout1[vt2] = true;
+			}
+			else
+			{
+				preciseout1[vt2] = false;
+			}
+		}
+		if(preciseout1[0] == 0){vt2=rc[B]["l"]+1;vt1=rc[A]["l"];}
+	}
+	//magia
+}
+var preciseout2 = [];
+preciseout2[0] = rc[A]["l"];
+for (vt1=1; vt1<=rc[B]["l"]; vt1++)
+{	
+	if(vt1 == rc[B]["l"]){vtt = 1;}else{vtt = vt1+1;}
+	for (vt2=1; vt2<=rc[A]["l"]; vt2++)
+	{	
+		if(preciseout2[vt2])
+		{}
+		else
+		{
+			if(oneside (rc[B][vt1]["x"],rc[B][vtt]["x"],p[2]["centmass"]["x"],rc[A][vt2]["x"],
+						rc[B][vt1]["y"],rc[B][vtt]["y"],p[2]["centmass"]["y"],rc[A][vt2]["y"]) == false) //точка точно снаружи centmass magia
+			{
+				preciseout2[0] = preciseout2[0]-1;
+				preciseout2[vt2] = true;
+			}
+			else
+			{
+				preciseout2[vt2] = false;
+			}
+		}
+		if(preciseout2[0] == 0){vt2=rc[A]["l"]+1;vt1=rc[B]["l"];}
+	}
+	//magia
+}
+
+
+
+if(preciseout1[0] == 0&&preciseout2[0] == 0){return false;}//все вершины обоих полигонов лежат за пределами друг друга, удара не было
+//тут случился удар
+console.log("УДАР");
+var impactpoint = [];
+var vertO,edgeO;
+
+if(preciseout1[0] == 0){}else//точка второго лежит где-то внутри
+	{
+		vertO = rc[B];
+		edgeO = rc[A];
+		for (vt=1; vt<=rc[B]["l"]; vt++)
+		{
+			if(preciseout1[vt]){}else
+			{
+				impactpoint[0] = vt;
+				impactpoint[2] = 2;//magia
+			}
+		}
+	}
+if(preciseout2[0] == 0){}else//точка первого лежит внутри
+	{
+		vertO = rc[A];
+		edgeO = rc[B];
+		for (vt=1; vt<=rc[A]["l"]; vt++)
+		{
+			if(preciseout2[vt]){}else
+			{
+				impactpoint[0] = vt;
+				impactpoint[2] = 1;//magia
+			}
+		}
+	}
+if (impactpoint[0] == vertO["l"])
+{impactpoint[1] = 1;}
+else
+{impactpoint[1] = impactpoint[0]+1;}//magia что это вообще такое?
+
+for (vt=1; vt<=edgeO["l"]; vt++) //перебор граней второго
+	{
+		if(vt == edgeO["l"]){vtt = 1;}else{vtt = vt+1;}//magia  зависимость от направления счета вершин?
+
+		if(oneside(vertO[impactpoint[0]]["x"],vertO[impactpoint[1]]["x"],edgeO[vt]["x"],edgeO[vtt]["x"],vertO[impactpoint[0]]["y"],vertO[impactpoint[1]]["y"],edgeO[vt]["y"],edgeO[vtt]["y"])){//отрезки не пересеклись
+		}
+		else
+		{
+			if(oneside(edgeO[vt]["x"],edgeO[vtt]["x"],vertO[impactpoint[0]]["x"],vertO[impactpoint[1]]["x"],edgeO[vt]["y"],edgeO[vtt]["y"],vertO[impactpoint[0]]["y"],vertO[impactpoint[1]]["y"])){//отрезки не пересеклись
+				}
+				else
+				{return [impactpoint[2],impactpoint[0],vt,vtt];/*пересеклись*/}
+		}
+	}
+
+
+
+return true;//УДАР!!!
+}//end collisionDetection
+
+
+
+
+
+function collisionResponse(A,B,details)
+{
+console.log(countround+"#######################################");
+countround++;
+/*
+details[0] - номер объекта, чья вершина врезалась
+details[1] - номер вершины, которая врезалась
+details[2],details[3] - вершины ударной грани, не точно magia
+*/
+var hitcor,knockcor,hitobj,knockobj,normA,normAx,normAy,tangentA,tangentAx,tangentAy,vertexel,angleea,Ei,Ed,Es,i,ic;
+var autotest1,autotest2,autotest3,autotest4;
+var normalvelocityout = [];
+var normalspinout;
+var nipoffout = [];
+var findEout = [];
+var hit = {};
+var kno = {};
+
+
+
+hit = {
+	contact:{
+		x:0,
+		y:0
+	},
+	radius:0,
+	pradius:0,
+	virtualmass:0,
+	tangent:{
+			l:0,
+			x:0,
+			y:0
+		},
+	normal:0,
+	spinnormal:0,
+	supposed:{
+		E:0,
+		v:0,
+		spin:0
+	},
+	end:{
+		spin:0,
+		normal:{
+			l:0,
+			x:0,
+			y:0
+		},
+		speed:{
+			x:0,
+			y:0
+		}
+	}
+};
+
+kno = {
+	contact:{
+		x:0,
+		y:0
+	},
+	radius:0,
+	pradius:0,
+	virtualmass:0,
+	tangent:{
+			l:0,
+			x:0,
+			y:0
+		},
+	normal:0,
+	spinnormal:0,
+	supposed:{
+		E:0,
+		v:0,
+		spin:0,
+		normalspin:0
+	},
+	end:{
+		spin:0,
+		normal:{
+			l:0,
+			x:0,
+			y:0
+		},
+		speed:{
+			x:0,
+			y:0
+		}
+	}
+};
+
+
+
+
+if(details[0] == 1){hitcor=rc[A];knockcor=rc[B];hitobj=p[A];knockobj=p[B];}
+if(details[0] == 2){hitcor=rc[B];knockcor=rc[A];hitobj=p[B];knockobj=p[A];}
+
+hit["contact"]["x"] = hitcor[details[1]]["x"];
+hit["contact"]["y"] = hitcor[details[1]]["y"];
+kno["contact"]["x"] = hitcor[details[1]]["x"];
+kno["contact"]["y"] = hitcor[details[1]]["y"];
+
+hit["radius"] = Math.sqrt(Math.pow(hit["contact"]["x"]-hitobj["centmass"]["x"], 2)+Math.pow(hit["contact"]["y"]-hitobj["centmass"]["y"], 2));
+kno["radius"] = Math.sqrt(Math.pow(kno["contact"]["x"]-knockobj["centmass"]["x"], 2)+Math.pow(kno["contact"]["y"]-knockobj["centmass"]["y"], 2));
+
+//collisionResponse subfunction
+function normangl(vt,vtt,angle)
+{var normalangle;
+normalangle = (knockobj["vertex"]["a"][vt] + knockobj["vertex"]["a"][vtt])/2;
+if (Math.sign(knockobj["vertex"]["a"][vt])!=Math.sign(knockobj["vertex"]["a"][vtt])&&Math.abs(knockobj["vertex"]["a"][vt])+Math.abs(knockobj["vertex"]["a"][vt])>Math.PI)
+{
+	if(normalangle>0)
+	{normalangle = normalangle-Math.PI;}
+	else
+	{
+		normalangle = normalangle+Math.PI;
+	}
+}
+normalangle = normalangle + angle;
+return normalangle;
+}
+
+
+normA = normangl(details[2],details[3],knockobj["angle"]);
+tangentA = normA + Math.PI/2;
+if(tangentA>Math.PI){tangentA = tangentA-2*Math.PI;}
+
+normAx = Math.cos(normA);
+normAy = Math.sin(normA);
+
+tangentAx = Math.cos(tangentA);
+tangentAy = Math.sin(tangentA);
+
+
+
+
+
+
+
+hit["pradius"] = 
+hit["radius"]*Math.cos(tangentA - Math.atan2(hitobj["centmass"]["y"]-hit["contact"]["y"], hitobj["centmass"]["x"]-hit["contact"]["x"]));
+kno["pradius"] = 
+kno["radius"]*Math.cos(tangentA - Math.atan2(knockobj["centmass"]["y"]-kno["contact"]["y"], knockobj["centmass"]["x"]-kno["contact"]["x"]));
+
+
+
+
+vertexel = Math.sqrt(Math.pow(knockobj["centmass"]["x"]-kno["contact"]["x"], 2)+Math.pow(knockobj["centmass"]["y"]-kno["contact"]["y"], 2));
+angleea = Math.atan2(kno["contact"]["y"] - knockobj["centmass"]["y"], kno["contact"]["x"] - knockobj["centmass"]["x"]);
+//	hitobj["vertex"]["l"][details[1]]
+//	(hitobj["angle"]+hitobj["vertex"]["a"][details[1]])
+
+function normalvelocity(nA, vx, vy)
+{var lineVL,lineVN,lineVT;
+
+lineVL = Math.sqrt(Math.pow(vx, 2)+Math.pow(vy, 2));
+lineVN = lineVL*Math.cos(Math.atan2(vy,vx)-nA);
+lineVT = lineVL*Math.sin(Math.atan2(vy,vx)-nA);
+
+return [lineVN,lineVT];
+}
+
+function normalspin(nA, spin, centx, centy, contactx, contacty,vtxL,vtxA)
+{var oldx,oldy,angVL,angVN;
+// if(spin == 0)
+// 	{return 0;}
+
+oldx = centx+vtxL*Math.cos(vtxA-spin);
+oldy = centy+vtxL*Math.sin(vtxA-spin);
+
+angVL = Math.sqrt(Math.pow(contactx-oldx, 2)+Math.pow(contacty-oldy, 2));
+angVN = angVL*Math.cos(Math.atan2(contacty-oldy,contactx-oldx)-nA);
+
+return angVN;
+}
+
+
+function nipoff(E, mass, kansei, r, normal, spin, spinnormal)//энергия для hit плюсовая, для knock - отрицательная
+{var linecent,anglcent,veloE,spinE,veloV,spinV;
+
+linecent = 1/(1+mass*Math.pow(r, 2)/kansei);
+anglcent = (mass*Math.pow(r, 2)/kansei)/(1+mass*Math.pow(r, 2)/kansei);
+
+veloE = linecent*E;
+spinE = anglcent*E;
+
+veloE = efromSpeed(normal,mass) + veloE;
+veloV = speedfromE(veloE,mass);
+
+if(Math.sign(spinnormal)==-Math.sign(spin)){spinE = efromSpin(spin,kansei) - spinE;console.log(" разные знаки ");}
+if(Math.sign(spinnormal)==Math.sign(spin)){spinE = efromSpin(spin,kansei) + spinE;console.log(" одинаковые знаки ");}
+if(spinnormal==0&&spin==0){spinE = efromSpin(spin,kansei) + spinE;console.log(" нули ");}
+
+spinV = spinfromE(spinE,kansei);
+
+return [veloV,spinV];
+}
+
+
+
+//collisionResponse subfunction
+
+normalvelocityout = normalvelocity(normA, hitobj["speed"]["x"], hitobj["speed"]["y"]);
+normalspinout = normalspin(normA, hitobj["spin"], hitobj["centmass"]["x"], hitobj["centmass"]["y"], hit["contact"]["x"], hit["contact"]["y"],hitobj["vertex"]["l"][details[1]], (hitobj["angle"]+hitobj["vertex"]["a"][details[1]]));
+
+hit["normal"] = normalvelocityout[0];
+hit["tangent"]["l"] = normalvelocityout[1];
+hit["spinnormal"] = normalspinout;
+
+if(hit["spinnormal"] == 0)
+{
+normalspinout = normalspin(normA, 0.01, hitobj["centmass"]["x"], hitobj["centmass"]["y"], hit["contact"]["x"], hit["contact"]["y"],hitobj["vertex"]["l"][details[1]], (hitobj["angle"]+hitobj["vertex"]["a"][details[1]]));
+hit["spinnormal"] = normalspinout;
+}
+	
+
+normalvelocityout = normalvelocity(normA, knockobj["speed"]["x"], knockobj["speed"]["y"]);
+normalspinout = normalspin(normA, knockobj["spin"], knockobj["centmass"]["x"], knockobj["centmass"]["y"], kno["contact"]["x"], kno["contact"]["y"],vertexel, angleea);
+kno["normal"] = normalvelocityout[0];
+kno["tangent"]["l"] = normalvelocityout[1];
+kno["spinnormal"] = normalspinout;
+
+
+
+
+function findE(E)
+{
+	hit["supposed"]["E"] = E;
+	kno["supposed"]["E"] = -hit["supposed"]["E"];
+
+	nipoffout = nipoff(hit["supposed"]["E"], mass[1], inertia[1], hit["pradius"], hit["normal"], hitobj["spin"], hit["spinnormal"]);
+	hit["supposed"]["v"] = nipoffout[0];
+	hit["supposed"]["spin"] = nipoffout[1];
+
+
+
+	nipoffout = nipoff(kno["supposed"]["E"], mass[2], inertia[2], kno["pradius"], kno["normal"], knockobj["spin"], kno["spinnormal"]);
+	kno["supposed"]["v"] = nipoffout[0];
+	kno["supposed"]["spin"] = nipoffout[1];
+
+	hit["supposed"]["normalspin"] = normalspin(normA, hit["supposed"]["spin"], hitobj["centmass"]["x"], hitobj["centmass"]["y"], hit["contact"]["x"], hit["contact"]["y"],hitobj["vertex"]["l"][details[1]], (hitobj["angle"]+hitobj["vertex"]["a"][details[1]]));
+	kno["supposed"]["normalspin"] = normalspin(normA, kno["supposed"]["spin"], knockobj["centmass"]["x"], knockobj["centmass"]["y"], kno["contact"]["x"], kno["contact"]["y"],vertexel, angleea);
+
+	return [hit["supposed"]["v"],hit["supposed"]["normalspin"],kno["supposed"]["v"],kno["supposed"]["normalspin"],hit["supposed"]["spin"],kno["supposed"]["spin"]];
+}
+
+
+
+
+Ei = 0.0001;
+Ed = 2;
+Es = 0;
+//findEout = findE(Ei);
+
+findEout[0] = hit["normal"];
+findEout[1] = hit["spinnormal"];
+findEout[2] = kno["normal"];
+findEout[3] = kno["spinnormal"];
+
+
+for(i=0; i<100;i++)
+{
+
+
+
+	if((findEout[0]+findEout[1])<(findEout[2]+findEout[3]))
+	{
+		Ei = Ei*Ed;
+		findEout = findE(Ei);
+		Es = Es + Ei;
+		console.log("1 hit");
+		console.log("нормальная скорость = "+findEout[0]);
+		console.log("нормальное вращение = "+findEout[1]);
+		console.log("полное вращение = "+findEout[4]);
+		console.log("kno");
+		console.log("нормальная скорость = "+findEout[2]);
+		console.log("нормальное вращение = "+findEout[3]);
+		console.log("полное вращение = "+findEout[5]);
+
+
+	}
+	else
+	{
+		Ed = 0.5;
+		Ei = Ei*Ed;
+		findEout = findE(-Ei);
+		Es = Es - Ei;
+		console.log("2 hit");
+		console.log("нормальная скорость = "+findEout[0]);
+		console.log("нормальное вращение = "+findEout[1]);
+		console.log("полное вращение = "+findEout[4]);
+		console.log("kno");
+		console.log("нормальная скорость = "+findEout[2]);
+		console.log("нормальное вращение = "+findEout[3]);
+		console.log("полное вращение = "+findEout[5]);
+
+	}
+	if(Ei<0.0001){
+		console.log("за сколько шагов нашли энергию = "+i);
+		i = 100;
+		}
+}
+
+
+
+nipoffout = nipoff(Es*2, mass[1], inertia[1], hit["pradius"], hit["normal"], hitobj["spin"], hit["spinnormal"]);
+hit["end"]["normal"]["l"] = nipoffout[0];
+hit["end"]["spin"] = nipoffout[1];
+
+nipoffout = nipoff(-Es*2, mass[2], inertia[2], kno["pradius"], kno["normal"], knockobj["spin"], kno["spinnormal"]);
+kno["end"]["normal"]["l"] = nipoffout[0];
+kno["end"]["spin"] = nipoffout[1];
+
+
+hit["end"]["normal"]["x"] = normAx*kno["end"]["normal"]["l"];
+hit["end"]["normal"]["y"] = normAy*kno["end"]["normal"]["l"];
+hit["tangent"]["x"] = tangentAx*hit["tangent"]["l"];
+hit["tangent"]["y"] = tangentAy*hit["tangent"]["l"];
+hit["end"]["speed"]["x"] = hit["end"]["normal"]["x"]+hit["tangent"]["x"];
+hit["end"]["speed"]["y"] = hit["end"]["normal"]["y"]+hit["tangent"]["y"];
+
+
+kno["end"]["normal"]["x"] = normAx*kno["end"]["normal"]["l"];
+kno["end"]["normal"]["y"] = normAy*kno["end"]["normal"]["l"];
+kno["tangent"]["x"] = tangentAx*kno["tangent"]["l"];
+kno["tangent"]["y"] = tangentAy*kno["tangent"]["l"];
+kno["end"]["speed"]["x"] = kno["end"]["normal"]["x"]+kno["tangent"]["x"];
+kno["end"]["speed"]["y"] = kno["end"]["normal"]["y"]+kno["tangent"]["y"];
+
+
+
+hitobj["spin"] = hit["end"]["spin"];
+hitobj["speed"]["x"] = hit["end"]["speed"]["x"];
+hitobj["speed"]["y"] = hit["end"]["speed"]["y"];
+
+knockobj["spin"] = kno["end"]["spin"];
+knockobj["speed"]["x"] = kno["end"]["speed"]["x"];
+knockobj["speed"]["y"] = kno["end"]["speed"]["y"];
+
+
+var fuck;
+fuck = 0;
+
+hitobj["centmass"]["x"] = hitobj["centmass"]["x"] - fuck*hitobj["speed"]["x"];
+hitobj["centmass"]["y"] = hitobj["centmass"]["y"] - fuck*hitobj["speed"]["y"];
+hitobj["angle"] = hitobj["angle"] - fuck*hitobj["spin"];
+
+
+knockobj["centmass"]["x"] = knockobj["centmass"]["x"] - fuck*knockobj["speed"]["x"];
+knockobj["centmass"]["y"] = knockobj["centmass"]["y"] - fuck*knockobj["speed"]["y"];
+knockobj["angle"] = knockobj["angle"] - fuck*knockobj["spin"];
+
+
+playstop = -1*playstop;
+
+
+}//end collisionResponse
+
+
+
+
+
+//#########################end###########################################################
+//#####################general function##################################################
+//#######################################################################################
+
+
+function main() //основной цикл
+{
+
+if(playstop == -1){return;}
+if(playcount>0){playcount--;return;}
+
+c.fillStyle = "#F0F8FF";
+c.fillRect(0, 0, 1200, 900);
+draw(1,colorobj[1]);
+draw(2,colorobj[2]);
+
+c.fillStyle = "#F0F8FF";
+c.fillRect(0, 0, 1200, 900);
+move(1);
+move(2);
+currentframe++;
+if (currentframe == 10){currentframe = 0;}
+draw(1,colorobj[1]);
+draw(2,colorobj[2]);
+var detailCollision = [];
+chien--;
+if (detailCollision = collisionDetection(1,2))
+{
+
+	if (chien<1)
+	{
+	collisionResponse(1,2,detailCollision);
+	chien = 9;
+	}
+
+}
+fullkin[1] = (Math.pow(p[1]["speed"]["x"], 2)+Math.pow(p[1]["speed"]["y"], 2))/2 + 13541.66*Math.pow(p[1]["spin"], 2)/2;
+fullkin[2] = (Math.pow(p[2]["speed"]["x"], 2)+Math.pow(p[2]["speed"]["y"], 2))/2 + 13541.66*Math.pow(p[2]["spin"], 2)/2;
+
+playcount = playspeed;
+
+}//end main
+
+
+
+var timerMain = setInterval("main()", 20);
+
+</script>
+
+</body>
+</html>
