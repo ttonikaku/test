@@ -520,11 +520,19 @@ details[2],details[3] - вершины ударной грани, не точн�
 var hitcor,knockcor,hitobj,knockobj,normA,normAx,normAy,tangentA,tangentAx,tangentAy,vertexel,angleea,Ei,Ed,Es,i,ic;
 var autotest1,autotest2,autotest3,autotest4;
 var normalvelocityout = [];
-var normalspinout;
+var normalspinout = [];
 var nipoffout = [];
 var findEout = [];
 var hit = {};
 var kno = {};
+
+
+
+
+
+
+
+
 
 
 
@@ -543,6 +551,7 @@ hit = {
 		},
 	normal:0,
 	spinnormal:0,
+	spinsign:0,
 	supposed:{
 		E:0,
 		v:0,
@@ -577,6 +586,7 @@ kno = {
 		},
 	normal:0,
 	spinnormal:0,
+	spinsign:0,
 	supposed:{
 		E:0,
 		v:0,
@@ -642,6 +652,23 @@ tangentAy = Math.sin(tangentA);
 
 
 
+var fullhitline,fullknoline;
+fullhitline = efromSpeed(hitobj["speed"]["x"],mass[1])+efromSpeed(hitobj["speed"]["y"],mass[1]);
+fullknoline = efromSpeed(knockobj["speed"]["x"],mass[2])+efromSpeed(knockobj["speed"]["y"],mass[2]);
+
+console.log(" до ");
+console.log(" hit ");
+console.log("вращение = "+efromSpin(hitobj["spin"], inertia[1]));
+console.log("линейная = "+fullhitline);
+
+
+console.log(" kno ");
+console.log("вращение = "+efromSpin(knockobj["spin"], inertia[2]));
+console.log("линейная = "+fullknoline);
+console.log(" до ");
+
+console.log("        ");
+console.log("        ");
 
 
 
@@ -679,12 +706,15 @@ oldy = centy+vtxL*Math.sin(vtxA-spin);
 angVL = Math.sqrt(Math.pow(contactx-oldx, 2)+Math.pow(contacty-oldy, 2));
 angVN = angVL*Math.cos(Math.atan2(contacty-oldy,contactx-oldx)-nA);
 
-return angVN;
+
+
+return [angVN,oldx,oldy,contactx,contacty,Math.cos(Math.atan2(contacty-oldy,contactx-oldx)-nA)];
 }
 
 
-function nipoff(E, mass, kansei, r, normal, spin, spinnormal)//энергия для hit плюсовая, для knock - отрицательная
+function nipoff(E, mass, kansei, r, normal, spin, spinsign,logid)//энергия для hit плюсовая, для knock - отрицательная
 {var linecent,anglcent,veloE,spinE,veloV,spinV;
+
 
 linecent = 1/(1+mass*Math.pow(r, 2)/kansei);
 anglcent = (mass*Math.pow(r, 2)/kansei)/(1+mass*Math.pow(r, 2)/kansei);
@@ -692,14 +722,30 @@ anglcent = (mass*Math.pow(r, 2)/kansei)/(1+mass*Math.pow(r, 2)/kansei);
 veloE = linecent*E;
 spinE = anglcent*E;
 
+if(logid)
+{
+
+
+}
+
+
+
 veloE = efromSpeed(normal,mass) + veloE;
 veloV = speedfromE(veloE,mass);
 
-if(Math.sign(spinnormal)==-Math.sign(spin)){spinE = efromSpin(spin,kansei) - spinE;console.log(" разные знаки ");}
-if(Math.sign(spinnormal)==Math.sign(spin)){spinE = efromSpin(spin,kansei) + spinE;console.log(" одинаковые знаки ");}
-if(spinnormal==0&&spin==0){spinE = efromSpin(spin,kansei) + spinE;console.log(" нули ");}
+
+spinE = efromSpin(spin,kansei) + spinsign*spinE;
+
+
 
 spinV = spinfromE(spinE,kansei);
+
+if(logid)
+{
+
+
+}
+
 
 return [veloV,spinV];
 }
@@ -713,12 +759,34 @@ normalspinout = normalspin(normA, hitobj["spin"], hitobj["centmass"]["x"], hitob
 
 hit["normal"] = normalvelocityout[0];
 hit["tangent"]["l"] = normalvelocityout[1];
-hit["spinnormal"] = normalspinout;
+hit["spinnormal"] = normalspinout[0];
 
-if(hit["spinnormal"] == 0)
+
+normalspinout = normalspin(normA, 0.1, hitobj["centmass"]["x"], hitobj["centmass"]["y"], hit["contact"]["x"], hit["contact"]["y"],hitobj["vertex"]["l"][details[1]], (hitobj["angle"]+hitobj["vertex"]["a"][details[1]]));
+
+
+c.fillStyle = "#00FFFF";
+c.beginPath();
+c.arc(normalspinout[1], normalspinout[2], 4, 0, Math.PI*2);
+c.fill();
+
+c.fillStyle = "#FF0000";
+c.beginPath();
+c.arc(normalspinout[3], normalspinout[4], 4, 0, Math.PI*2);
+c.fill();
+
+
+//console.log("1234 отладка№1 = "+normalspinout[5]);
+
+
+
+if(Math.sign(normalspinout[0])==-Math.sign(0.1))
 {
-normalspinout = normalspin(normA, 0.01, hitobj["centmass"]["x"], hitobj["centmass"]["y"], hit["contact"]["x"], hit["contact"]["y"],hitobj["vertex"]["l"][details[1]], (hitobj["angle"]+hitobj["vertex"]["a"][details[1]]));
-hit["spinnormal"] = normalspinout;
+	hit["spinsign"] = -1;
+}
+else
+{
+	hit["spinsign"] = 1;
 }
 	
 
@@ -726,8 +794,32 @@ normalvelocityout = normalvelocity(normA, knockobj["speed"]["x"], knockobj["spee
 normalspinout = normalspin(normA, knockobj["spin"], knockobj["centmass"]["x"], knockobj["centmass"]["y"], kno["contact"]["x"], kno["contact"]["y"],vertexel, angleea);
 kno["normal"] = normalvelocityout[0];
 kno["tangent"]["l"] = normalvelocityout[1];
-kno["spinnormal"] = normalspinout;
+kno["spinnormal"] = normalspinout[0];
 
+
+normalspinout = normalspin(normA, 0.1, knockobj["centmass"]["x"], knockobj["centmass"]["y"], kno["contact"]["x"], kno["contact"]["y"],vertexel, angleea);
+
+c.fillStyle = "#0000FF";
+c.beginPath();
+c.arc(normalspinout[1], normalspinout[2], 4, 0, Math.PI*2);
+c.fill();
+
+c.fillStyle = "#00FF00";
+c.beginPath();
+c.arc(normalspinout[3], normalspinout[4], 4, 0, Math.PI*2);
+c.fill();
+
+//console.log("1234 отладка№2 = "+normalspinout[5]);
+
+
+if(Math.sign(normalspinout[0])==-Math.sign(0.1))
+{
+	kno["spinsign"] = -1;
+}
+else
+{
+	kno["spinsign"] = 1;
+}
 
 
 
@@ -736,18 +828,22 @@ function findE(E)
 	hit["supposed"]["E"] = E;
 	kno["supposed"]["E"] = -hit["supposed"]["E"];
 
-	nipoffout = nipoff(hit["supposed"]["E"], mass[1], inertia[1], hit["pradius"], hit["normal"], hitobj["spin"], hit["spinnormal"]);
+	nipoffout = nipoff(hit["supposed"]["E"], mass[1], inertia[1], hit["pradius"], hit["normal"], hitobj["spin"], hit["spinsign"], false);
 	hit["supposed"]["v"] = nipoffout[0];
 	hit["supposed"]["spin"] = nipoffout[1];
 
 
 
-	nipoffout = nipoff(kno["supposed"]["E"], mass[2], inertia[2], kno["pradius"], kno["normal"], knockobj["spin"], kno["spinnormal"]);
+	nipoffout = nipoff(kno["supposed"]["E"], mass[2], inertia[2], kno["pradius"], kno["normal"], knockobj["spin"], kno["spinsign"], false);
 	kno["supposed"]["v"] = nipoffout[0];
 	kno["supposed"]["spin"] = nipoffout[1];
 
-	hit["supposed"]["normalspin"] = normalspin(normA, hit["supposed"]["spin"], hitobj["centmass"]["x"], hitobj["centmass"]["y"], hit["contact"]["x"], hit["contact"]["y"],hitobj["vertex"]["l"][details[1]], (hitobj["angle"]+hitobj["vertex"]["a"][details[1]]));
-	kno["supposed"]["normalspin"] = normalspin(normA, kno["supposed"]["spin"], knockobj["centmass"]["x"], knockobj["centmass"]["y"], kno["contact"]["x"], kno["contact"]["y"],vertexel, angleea);
+
+	normalspinout = normalspin(normA, hit["supposed"]["spin"], hitobj["centmass"]["x"], hitobj["centmass"]["y"], hit["contact"]["x"], hit["contact"]["y"],hitobj["vertex"]["l"][details[1]], (hitobj["angle"]+hitobj["vertex"]["a"][details[1]]));
+	hit["supposed"]["normalspin"] = normalspinout[0];
+
+	normalspinout = normalspin(normA, kno["supposed"]["spin"], knockobj["centmass"]["x"], knockobj["centmass"]["y"], kno["contact"]["x"], kno["contact"]["y"],vertexel, angleea);
+	kno["supposed"]["normalspin"] = normalspinout[0];
 
 	return [hit["supposed"]["v"],hit["supposed"]["normalspin"],kno["supposed"]["v"],kno["supposed"]["normalspin"],hit["supposed"]["spin"],kno["supposed"]["spin"]];
 }
@@ -755,7 +851,7 @@ function findE(E)
 
 
 
-Ei = 0.0001;
+Ei = 0.00001;
 Ed = 2;
 Es = 0;
 //findEout = findE(Ei);
@@ -766,58 +862,50 @@ findEout[2] = kno["normal"];
 findEout[3] = kno["spinnormal"];
 
 
-for(i=0; i<100;i++)
+for(i=0; i<1000;i++)
 {
-
-
-
+	
 	if((findEout[0]+findEout[1])<(findEout[2]+findEout[3]))
 	{
 		Ei = Ei*Ed;
-		findEout = findE(Ei);
+		findEout = findE(Es);
 		Es = Es + Ei;
-		console.log("1 hit");
-		console.log("нормальная скорость = "+findEout[0]);
-		console.log("нормальное вращение = "+findEout[1]);
-		console.log("полное вращение = "+findEout[4]);
-		console.log("kno");
-		console.log("нормальная скорость = "+findEout[2]);
-		console.log("нормальное вращение = "+findEout[3]);
-		console.log("полное вращение = "+findEout[5]);
-
-
+		// localStorage.setItem("hitline"+i, findEout[0]);
+		// localStorage.setItem("hitangle"+i, findEout[1]);
+		// localStorage.setItem("knoline"+i, findEout[2]);
+		// localStorage.setItem("knoangle"+i, findEout[3]);
 	}
 	else
 	{
 		Ed = 0.5;
 		Ei = Ei*Ed;
-		findEout = findE(-Ei);
+		findEout = findE(-Es);
 		Es = Es - Ei;
-		console.log("2 hit");
-		console.log("нормальная скорость = "+findEout[0]);
-		console.log("нормальное вращение = "+findEout[1]);
-		console.log("полное вращение = "+findEout[4]);
-		console.log("kno");
-		console.log("нормальная скорость = "+findEout[2]);
-		console.log("нормальное вращение = "+findEout[3]);
-		console.log("полное вращение = "+findEout[5]);
+		// localStorage.setItem("hitline"+i, findEout[0]);
+		// localStorage.setItem("hitangle"+i, findEout[1]);
+		// localStorage.setItem("knoline"+i, findEout[2]);
+		// localStorage.setItem("knoangle"+i, findEout[3]);
 
 	}
-	if(Ei<0.0001){
-		console.log("за сколько шагов нашли энергию = "+i);
-		i = 100;
+	if(Ei<0.000000000001){
+
+		i = 9999999;
 		}
 }
 
 
 
-nipoffout = nipoff(Es*2, mass[1], inertia[1], hit["pradius"], hit["normal"], hitobj["spin"], hit["spinnormal"]);
+
+
+nipoffout = nipoff(Es*2, mass[1], inertia[1], hit["pradius"], hit["normal"], hitobj["spin"], hit["spinsign"], true);
 hit["end"]["normal"]["l"] = nipoffout[0];
 hit["end"]["spin"] = nipoffout[1];
 
-nipoffout = nipoff(-Es*2, mass[2], inertia[2], kno["pradius"], kno["normal"], knockobj["spin"], kno["spinnormal"]);
+nipoffout = nipoff(-Es*2, mass[2], inertia[2], kno["pradius"], kno["normal"], knockobj["spin"], kno["spinsign"], true);
 kno["end"]["normal"]["l"] = nipoffout[0];
 kno["end"]["spin"] = nipoffout[1];
+
+
 
 
 hit["end"]["normal"]["x"] = normAx*kno["end"]["normal"]["l"];
@@ -844,6 +932,27 @@ hitobj["speed"]["y"] = hit["end"]["speed"]["y"];
 knockobj["spin"] = kno["end"]["spin"];
 knockobj["speed"]["x"] = kno["end"]["speed"]["x"];
 knockobj["speed"]["y"] = kno["end"]["speed"]["y"];
+
+
+
+
+fullhitline = efromSpeed(hitobj["speed"]["x"],mass[1])+efromSpeed(hitobj["speed"]["y"],mass[1]);
+fullknoline = efromSpeed(knockobj["speed"]["x"],mass[2])+efromSpeed(knockobj["speed"]["y"],mass[2]);
+
+
+
+console.log(" после ");
+console.log(" hit ");
+console.log("вращение = "+efromSpin(hitobj["spin"], inertia[1]));
+console.log("линейная = "+fullhitline);
+
+
+console.log(" kno ");
+console.log("вращение = "+efromSpin(knockobj["spin"], inertia[2]));
+console.log("линейная = "+fullknoline);
+console.log(" после ");
+
+
 
 
 var fuck;
@@ -879,10 +988,6 @@ function main() //основной цикл
 if(playstop == -1){return;}
 if(playcount>0){playcount--;return;}
 
-c.fillStyle = "#F0F8FF";
-c.fillRect(0, 0, 1200, 900);
-draw(1,colorobj[1]);
-draw(2,colorobj[2]);
 
 c.fillStyle = "#F0F8FF";
 c.fillRect(0, 0, 1200, 900);
@@ -900,7 +1005,7 @@ if (detailCollision = collisionDetection(1,2))
 	if (chien<1)
 	{
 	collisionResponse(1,2,detailCollision);
-	chien = 9;
+	chien = 4;
 	}
 
 }

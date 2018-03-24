@@ -1,0 +1,121 @@
+<!DOCTYPE HTML>
+<html>
+<head><meta charset="utf-8"></head>
+<body onkeydown="getKhar(event)">
+<canvas id="canmain" width="1200" height="900"></canvas>
+<script>
+"use strict";
+var b_canvas = document.getElementById("canmain");
+var c = b_canvas.getContext("2d");
+c.translate(0,900);
+c.scale(1,-1);
+
+
+
+var i,resolutionx,resolutiony,startx,starty,uotpyt1,uotpyt2,uotpyt3,uotpyt4,uotpyt5,uotpyt6,uotpyt7,chartcolor;
+
+resolutionx = 20;
+resolutiony = 500;
+
+startx = 50;
+starty = 500;
+
+for (i=0; i<24; i++)
+{
+
+//###################################################################################
+uotpyt1 = 
+
+localStorage.getItem("hitline"+i)
+
+;
+chartcolor = "#00AA00";
+console.log("hitline"+i+" = %c"+uotpyt1, "color: "+chartcolor+";");
+c.fillStyle = chartcolor;
+c.beginPath();
+c.arc(i*resolutionx+startx,uotpyt1*resolutiony+starty, 4, 0, Math.PI*2);
+c.fill();
+//###################################################################################
+uotpyt2 = 
+
+localStorage.getItem("hitangle"+i)
+
+;
+chartcolor = "#FF0000";
+console.log("hitangle"+i+" = %c"+uotpyt2, "color: "+chartcolor+";");
+c.fillStyle = chartcolor;
+c.beginPath();
+c.arc(i*resolutionx+startx,uotpyt2*resolutiony*1000000+starty, 4, 0, Math.PI*2);
+c.fill();
+//###################################################################################
+uotpyt3 = 
+
+localStorage.getItem("knoline"+i)
+
+;
+chartcolor = "#0000FF";
+console.log("knoline"+i+" = %c"+uotpyt3, "color: "+chartcolor+";");
+c.fillStyle = chartcolor;
+c.beginPath();
+c.arc(i*resolutionx+startx,uotpyt3*resolutiony+starty, 4, 0, Math.PI*2);
+c.fill();
+//###################################################################################
+uotpyt4 = 
+
+localStorage.getItem("knoangle"+i)
+
+;
+chartcolor = "#AAAA00";
+console.log("knoangle"+i+" = %c"+uotpyt4, "color: "+chartcolor+";");
+c.fillStyle = chartcolor;
+c.beginPath();
+c.arc(i*resolutionx+startx,uotpyt4*resolutiony*1000000+starty, 4, 0, Math.PI*2);
+c.fill();
+//###################################################################################
+// uotpyt5 = 
+
+// hozon(n[numobj]["othervelocity"],0,n[numobj]["othermass"],uotpyt4/2)
+
+// ;
+// chartcolor = "#FF00FF";
+// console.log("расчетная масса = %c"+uotpyt5, "color: "+chartcolor+";");
+// c.fillStyle = chartcolor;
+// c.beginPath();
+// c.arc(i*resolutionx+startx,uotpyt5*resolutiony+starty, 4, 0, Math.PI*2);
+// c.fill();
+//###################################################################################
+// uotpyt6 = 
+
+// zerozero(uotpyt5-uotpyt1)
+
+// ;
+// chartcolor = "#00FFFF";
+// console.log("контроль = %c"+uotpyt6, "color: "+chartcolor+";");
+// c.fillStyle = chartcolor;
+// c.beginPath();
+// c.arc(i*resolutionx+startx,uotpyt6*resolutiony+starty, 4, 0, Math.PI*2);
+// c.fill();
+//###################################################################################
+// uotpyt7 = 
+
+// uotpyt5-uotpyt6
+
+// ;
+// chartcolor = "#AAAAAA";
+// console.log("контроль = %c"+uotpyt7, "color: "+chartcolor+";");
+// c.fillStyle = chartcolor;
+// c.beginPath();
+// c.arc(i*resolutionx+startx,uotpyt7*resolutiony+starty, 4, 0, Math.PI*2);
+// c.fill();
+//###################################################################################
+}
+
+
+
+
+
+
+</script>
+
+</body>
+</html>
